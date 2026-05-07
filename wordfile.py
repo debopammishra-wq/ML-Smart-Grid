@@ -66,34 +66,35 @@ with tab1:
     st.line_chart(history[['cloud_cover', 'wind_speed']])
 
 with tab2:
-    st.subheader("XGBoost Feature Importance")
+    st.subheader("🧠 XGBoost AI Analysis")
     
-    # Training variables
+    # 1. Training Parameters
     feats = ['hour_sin', 'cloud_cover', 'wind_speed', 'lag_1h']
     X = data[feats].tail(3000)
     y = data['Global_active_power'].tail(3000)
     
-    # Train model
-    model = XGBRegressor(n_estimators=100)
+    # 2. Robust Model Settings
+    model = XGBRegressor(n_estimators=50, max_depth=3, colsample_bytree=0.7)
     model.fit(X[:-60], y[:-60])
     
-    # Feature Importance Chart
-    importance_df = pd.DataFrame({
-        'Feature': feats,
-        'Influence': model.feature_importances_
-    }).sort_values(by='Influence', ascending=False)
+    # 3. Force Render for Mobile
+    # We use st.bar_chart with a fixed height to prevent it from collapsing on phones
+    importance_scores = model.feature_importances_
     
-    st.bar_chart(importance_df.set_index('Feature'))
-    
-    # Predictive Analytics
-    forecast = model.predict(X[-60:])
-    peak_val = np.max(forecast)
-    
-    st.subheader("🔮 60-Minute Forecast")
-    if peak_val > dr_limit:
-        st.error(f"🚨 PEAK PREDICTED: {peak_val:.2f} kW. Initiating Peak Shaving.")
+    if sum(importance_scores) > 0:
+        importance_df = pd.DataFrame({
+            'Feature': feats,
+            'Influence': importance_scores
+        }).sort_values(by='Influence', ascending=False)
+        
+        # Setting use_container_width=True and a fixed height fixes mobile rendering
+        st.bar_chart(importance_df.set_index('Feature'), use_container_width=True, height=300)
+        
+        # Add a text-based backup for mobile users
+        with st.expander("See Raw Importance Scores"):
+            st.write(importance_df)
     else:
-        st.success(f"✅ Grid Stable. Expected Peak: {peak_val:.2f} kW.")
+        st.warning("Model is training... Refreshing telemetry.")
 
 # --- 5. FOOTER ---
 st.divider()
