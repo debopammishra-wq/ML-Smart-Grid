@@ -4,3 +4,4 @@ numpy
 matplotlib
 xgboost
 gdown
+scikit-learn
